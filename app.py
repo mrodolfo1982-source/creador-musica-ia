@@ -8,12 +8,13 @@ st.title("🎵 Creador de Música con IA")
 st.subheader("Convierte tus pasajes o cuentos en canciones reales")
 
 # 2. Conexión segura con tu API Key
-try:
-    # Intentamos obtener la clave de los Secrets de Streamlit
+# Intentamos obtener la clave de los Secrets de Streamlit
+if "GOOGLE_API_KEY" in st.secrets:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
-except Exception:
-    st.error("⚠️ No se encontró la API Key en los Secrets de Streamlit.")
+else:
+    st.error("⚠️ No se encontró la clave 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
+    st.info("Ve a Settings > Secrets y asegúrate de que el nombre sea exacto.")
     st.stop()
 
 # 3. Interfaz de usuario
@@ -27,37 +28,44 @@ genero = st.selectbox("Elige el estilo musical:",
                        "Épico Orquestal", 
                        "Jazz Relajante"])
 
-# 4. Lógica de generación con corrección de modelos
+# 4. Lógica de generación
 if st.button("Generar Canción"):
     if texto_usuario:
         with st.spinner(f"Componiendo tu canción en estilo {genero}..."):
-            # Probamos con el nombre más compatible para la versión actual de la API
-            modelos_a_probar = ['gemini-1.5-flash', 'gemini-pro']
+            # Lista de modelos para probar (del más nuevo al más estable)
+            modelos = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
             exito = False
-            
-            for nombre_modelo in modelos_a_probar:
+            error_detallado = ""
+
+            for nombre_modelo in modelos:
                 try:
                     model = genai.GenerativeModel(nombre_modelo)
                     prompt_musical = (
                         f"Actúa como un compositor experto. Basado en este texto: '{texto_usuario}', "
-                        f"crea la letra y describe detalladamente la instrumentación para una canción de {genero}. "
+                        f"escribe la letra y describe detalladamente la instrumentación para una canción de {genero}. "
                         "Explica el ritmo, los instrumentos y el sentimiento de la pieza."
                     )
                     
                     response = model.generate_content(prompt_musical)
                     
-                    st.success(f"¡Composición finalizada con éxito!")
+                    # Si llegamos aquí, funcionó
+                    st.success(f"¡Composición finalizada con éxito (usando {nombre_modelo})!")
+                    st.markdown("---")
                     st.markdown("### 📜 Estructura y Composición Musical")
                     st.write(response.text)
                     
-                    st.info("💡 La IA ha diseñado la partitura y estructura. El motor de audio Lyria procesará el sonido basándose en esta descripción.")
+                    st.info("💡 La IA ha diseñado la partitura. El motor de audio generará el sonido basado en esta descripción.")
                     exito = True
-                    break # Si funciona, salimos del bucle
+                    break 
                 except Exception as e:
-                    continue # Si falla, intenta con el siguiente nombre de la lista
-            
+                    error_detallado += f"- Error con {nombre_modelo}: {str(e)}\n"
+                    continue 
+
             if not exito:
-                st.error("Lo sentimos, hubo un problema de conexión con los modelos de Google. Verifica tu API Key o intenta más tarde.")
+                st.error("No se pudo conectar con los modelos de Google.")
+                with st.expander("Ver detalles técnicos del error"):
+                    st.write(error_detallado)
+                    st.write("Consejo: Revisa que tu API Key no tenga espacios extra y que tu cuenta tenga acceso a Gemini.")
     else:
         st.warning("Por favor, pega un texto primero.")
 
