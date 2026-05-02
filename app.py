@@ -1,38 +1,51 @@
 import streamlit as st
 import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
-# 1. Configuración de la interfaz
-st.set_page_config(page_title="Compositor Musical IA", page_icon="🎵")
-st.title("🎵 Generador de Composiciones Musicales")
+# Configuración de la página
+st.set_page_config(page_title="Music Gen AI", page_icon="🎵")
 
-# 2. Configuración de la API Key (Desde Secrets de Streamlit)
-if "GOOGLE_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-else:
-    st.error("⚠️ Configura 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
-    st.stop()
+# Cargar API Key
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# 3. Entrada de datos
-texto_usuario = st.text_area("Ingresa el texto o pasaje:", height=150)
-genero = st.selectbox("Estilo musical:", ["Reggae", "Gospel", "Balada", "Jazz", "Orquestal"])
+## --- INTERFAZ DE USUARIO ---
+st.title("🎵 Generador de Conceptos Musicales")
+st.markdown("Crea estructuras y sugerencias de composición usando IA.")
 
-# 4. Generación
-if st.button("Generar"):
-    if texto_usuario:
-        with st.spinner("Procesando..."):
-            try:
-                # Usamos el modelo más estable
-                model = genai.GenerativeModel('gemini-pro')
+with st.sidebar:
+    st.header("Configuración")
+    model_choice = st.selectbox("Modelo", ["gemini-1.5-flash", "gemini-1.5-pro"])
+    temperature = st.slider("Creatividad", 0.0, 1.0, 0.7)
+
+prompt_usuario = st.text_area(
+    "Describe la música que tienes en mente:",
+    placeholder="Ej: Un beat de Lo-fi melancólico con trompetas de jazz y un ritmo de 90 BPM..."
+)
+
+if st.button("Generar Estructura Musical"):
+    if prompt_usuario:
+        try:
+            model = genai.GenerativeModel(model_choice)
+            
+            # Prompt optimizado para composición
+            full_prompt = f"""
+            Actúa como un productor musical experto. Basado en la siguiente descripción: '{prompt_usuario}', 
+            proporciona:
+            1. Progresión de acordes sugerida.
+            2. Instrumentación recomendada.
+            3. Estructura de la canción (Intro, Verso, Coro).
+            4. Sugerencia de BPM y escala musical.
+            """
+            
+            with st.spinner("Componiendo..."):
+                response = model.generate_content(full_prompt)
                 
-                prompt = f"Escribe la letra y describe la instrumentación para una canción de estilo {genero} basada en: {texto_usuario}"
-                
-                response = model.generate_content(prompt)
-                
-                st.success("¡Listo!")
-                st.markdown("### Resultado:")
-                st.write(response.text)
-                
-            except Exception as e:
-                st.error(f"Error: {e}")
+            st.subheader("🎼 Propuesta Musical")
+            st.write(response.text)
+            
+        except Exception as e:
+            st.error(f"Hubo un error: {e}")
     else:
-        st.warning("Escribe algo para continuar.")
+        st.warning("Por favor, escribe una descripción.")
