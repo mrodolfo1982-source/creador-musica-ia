@@ -33,7 +33,7 @@ if st.button("Generar Canción"):
     if texto_usuario:
         with st.spinner(f"Componiendo tu canción en estilo {genero}..."):
             # Lista de modelos para probar (del más nuevo al más estable)
-            modelos = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+           modelos = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro', 'gemini-pro']
             exito = False
             error_detallado = ""
 
