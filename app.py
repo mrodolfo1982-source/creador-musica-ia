@@ -1,47 +1,67 @@
 import streamlit as st
 import google.generativeai as genai
 
-st.set_page_config(page_title="Generador de Música Gemini 3", page_icon="🎵")
+st.set_page_config(page_title="Generador Musical Personalizado", page_icon="🎵")
 
-# Recuperar la llave de los Secretos de Streamlit
+# Configuración de la API Key desde los Secrets de Streamlit
 if "GOOGLE_API_KEY" in st.secrets:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Configura GOOGLE_API_KEY en los Secrets.")
+    st.error("Por favor, configura la GOOGLE_API_KEY en los Secrets.")
     st.stop()
 
-st.title("🎵 Generador de Música Gemini 3")
+st.title("🎵 Generador de Música con Referencias")
 
-estilo = st.selectbox("Selecciona un estilo:", 
-                      ["Reggae", "Vallenato", "Salsa", "Rock Alternativo", "Gospel", "Lo-fi"])
+# --- AQUÍ PUEDES COLOCAR TUS PROPIAS REFERENCIAS ---
+# Puedes añadir más artistas o géneros siguiendo este formato
+opciones_musicales = {
+    "Reggae (Bob Marley)": "Classic roots reggae with a voice similar to Bob Marley, rhythmic guitar skanks, and a deep bassline.",
+    "Vallenato (Diomedes Díaz)": "Traditional Colombian Vallenato with accordion, caja, and guacharaca, style of Diomedes Díaz.",
+    "Salsa (Héctor Lavoe)": "Classic 70s Salsa Brava with heavy trombones and the vocal phrasing of Héctor Lavoe.",
+    "Rock (Soda Stereo)": "80s Latin Rock/Post-punk style, melodic bass and atmospheric guitars similar to Gustavo Cerati.",
+    "Rock (Caramelos de Cianuro)": "90s Latin Rock/Post-punk style, melodic bass and vocal ad-libs in the style of Asier Cazalis.",
+    "Pop (Michael Jackson)": "80s Pop with groovy synth-bass, crisp drums, and vocal ad-libs in the style of Michael Jackson."
+}
 
-mensaje = st.text_area("Texto para la canción:")
+seleccion = st.selectbox("Elige tu estilo y referencia:", list(opciones_musicales.keys()))
+referencia_tecnica = opciones_musicales[seleccion]
+
+mensaje = st.text_area("Texto/Letra para la canción:", placeholder="Escribe aquí el mensaje...")
 
 if st.button("Generar Audio"):
     if mensaje:
         try:
-            # Usamos Gemini 3 Flash, que es el modelo central en tu tier gratuito
-            model = genai.GenerativeModel('gemini-3-flash')
+            # Usamos el modelo 1.5 Flash que es el más estable para la API por ahora
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # El prompt debe ser explícito para que el modelo active su herramienta de audio
-            prompt_final = f"Generate a 30-second music track. Style: {estilo}. Theme: {mensaje}. Return the audio file."
+            # Construimos el prompt usando la referencia que elegiste
+            prompt_final = f"""
+            Generate a 30-second high-quality audio track.
+            STYLE REFERENCE: {referencia_tecnica}
+            LYRICS/THEME: {mensaje}
+            Output only the audio content.
+            """
             
-            with st.spinner("Generando música con Gemini 3..."):
-                # En Gemini 3, la generación de audio se maneja a través de generate_content
-                response = model.generate_content(prompt_final)
+            with st.spinner(f"Generando {seleccion}..."):
+                # Llamada con soporte para audio
+                response = model.generate_content(
+                    prompt_final,
+                    generation_config=genai.types.GenerationConfig(
+                        response_mime_type="audio/wav"
+                    )
+                )
                 
-                # Buscamos el componente de audio en la respuesta
+                # Verificamos si devolvió datos de audio
                 if response.candidates[0].content.parts:
-                    # Intentamos extraer los datos binarios del audio
-                    st.subheader("🎼 Resultado:")
-                    # Nota: Streamlit necesita los bytes directamente
-                    st.audio(response.candidates[0].content.parts[0].inline_data.data, format="audio/wav")
-                    st.success("¡Generado con éxito!")
+                    audio_data = response.candidates[0].content.parts[0].inline_data.data
+                    st.subheader(f"🎼 Resultado: {seleccion}")
+                    st.audio(audio_data, format="audio/wav")
+                    st.success("¡Música generada!")
                 else:
-                    st.error("El modelo no devolvió un archivo de audio. Intenta simplificar el texto.")
-                
+                    st.error("El modelo no generó audio. Intenta con un texto más corto.")
+
         except Exception as e:
-            st.error(f"Error técnico: {e}")
+            st.error(f"Error: {e}")
+            st.info("Si el error persiste, es probable que Google esté limitando la generación de audio en tu región hoy.")
     else:
         st.warning("Escribe algo primero.")
