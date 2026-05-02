@@ -1,50 +1,47 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Configuración visual
-st.set_page_config(page_title="Generador de Música Lyria", page_icon="🎵")
+st.set_page_config(page_title="Generador de Música Gemini 3", page_icon="🎵")
 
-# Recuperar la llave de los Secretos de Streamlit (Para la web)
+# Recuperar la llave de los Secretos de Streamlit
 if "GOOGLE_API_KEY" in st.secrets:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
 else:
-    st.error("Falta la configuración de GOOGLE_API_KEY en Secrets.")
+    st.error("Configura GOOGLE_API_KEY en los Secrets.")
     st.stop()
 
-st.title("🎵 Generador de Música Real (Free)")
-st.markdown("Utilizando tecnología de **Google Lyria 3**.")
+st.title("🎵 Generador de Música Gemini 3")
 
-# Opciones de estilo
-estilo = st.selectbox("Selecciona un estilo musical:", 
-                      ["Reggae (Voz estilo Bob Marley)", "Vallenato", "Salsa", "Rock", "Lo-fi"])
+estilo = st.selectbox("Selecciona un estilo:", 
+                      ["Reggae", "Vallenato", "Salsa", "Rock Alternativo", "Gospel", "Lo-fi"])
 
-# El "Chat" donde pegas tu texto
-mensaje = st.text_area("Pega el texto que quieres convertir en canción:", 
-                       height=150, 
-                       placeholder="Ej: Para ser adoptados hijos suyos por medio de Jesucristo...")
+mensaje = st.text_area("Texto para la canción:")
 
 if st.button("Generar Audio"):
     if mensaje:
         try:
-            # Seleccionamos el modelo de música que aparece en tu panel
-            model = genai.GenerativeModel('lyria-3')
+            # Usamos Gemini 3 Flash, que es el modelo central en tu tier gratuito
+            model = genai.GenerativeModel('gemini-3-flash')
             
-            # Configuramos el prompt para que sea específico al estilo
-            prompt_final = f"Generate a high-fidelity 30-second music track in {estilo} style. Use the following lyrics/theme: {mensaje}"
+            # El prompt debe ser explícito para que el modelo active su herramienta de audio
+            prompt_final = f"Generate a 30-second music track. Style: {estilo}. Theme: {mensaje}. Return the audio file."
             
-            with st.spinner("Compitiendo... esto puede tardar unos segundos"):
-                # Llamada a la API de generación de música
-                result = model.generate_content(prompt_final)
+            with st.spinner("Generando música con Gemini 3..."):
+                # En Gemini 3, la generación de audio se maneja a través de generate_content
+                response = model.generate_content(prompt_final)
                 
-                # El modelo Lyria devuelve un objeto que incluye el audio
-                # Streamlit lo reproduce automáticamente
-                st.subheader("🎼 Tu resultado:")
-                st.audio(result.audio_data, format="audio/wav")
-                st.success("¡Música generada exitosamente!")
+                # Buscamos el componente de audio en la respuesta
+                if response.candidates[0].content.parts:
+                    # Intentamos extraer los datos binarios del audio
+                    st.subheader("🎼 Resultado:")
+                    # Nota: Streamlit necesita los bytes directamente
+                    st.audio(response.candidates[0].content.parts[0].inline_data.data, format="audio/wav")
+                    st.success("¡Generado con éxito!")
+                else:
+                    st.error("El modelo no devolvió un archivo de audio. Intenta simplificar el texto.")
                 
         except Exception as e:
-            st.error(f"Error al generar: {e}")
-            st.info("Nota: Si recibes un error de 'Model Not Found', es posible que debas usar 'gemini-3-flash' para la lógica y esperar la integración completa del audio.")
+            st.error(f"Error técnico: {e}")
     else:
-        st.warning("Escribe algo primero para poder generar la música.")
+        st.warning("Escribe algo primero.")
