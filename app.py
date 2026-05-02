@@ -8,7 +8,6 @@ st.title("🎵 Creador de Música con IA")
 st.subheader("Convierte tus pasajes o cuentos en canciones reales")
 
 # 2. Conexión segura con tu API Key
-# Intentamos obtener la clave de los Secrets de Streamlit
 if "GOOGLE_API_KEY" in st.secrets:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
@@ -32,8 +31,8 @@ genero = st.selectbox("Elige el estilo musical:",
 if st.button("Generar Canción"):
     if texto_usuario:
         with st.spinner(f"Componiendo tu canción en estilo {genero}..."):
-            # Lista de modelos para probar (del más nuevo al más estable)
-           modelos = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro', 'gemini-pro']
+            # Lista de modelos corregida
+            modelos = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro', 'gemini-pro']
             exito = False
             error_detallado = ""
 
@@ -48,7 +47,6 @@ if st.button("Generar Canción"):
                     
                     response = model.generate_content(prompt_musical)
                     
-                    # Si llegamos aquí, funcionó
                     st.success(f"¡Composición finalizada con éxito (usando {nombre_modelo})!")
                     st.markdown("---")
                     st.markdown("### 📜 Estructura y Composición Musical")
@@ -65,7 +63,6 @@ if st.button("Generar Canción"):
                 st.error("No se pudo conectar con los modelos de Google.")
                 with st.expander("Ver detalles técnicos del error"):
                     st.write(error_detallado)
-                    st.write("Consejo: Revisa que tu API Key no tenga espacios extra y que tu cuenta tenga acceso a Gemini.")
     else:
         st.warning("Por favor, pega un texto primero.")
 
